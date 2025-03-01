@@ -37,12 +37,19 @@ jobs:
             pkg-config \
             nasm \
             git \
-            curl
+            curl \
+            wget \
+            unzip
 
-      # 4. FFmpeg ni klonlash va sozlash
-      - name: Clone and configure FFmpeg
+      # 4. FFmpeg ni klonlash
+      - name: Clone FFmpeg
         run: |
           git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          cd ffmpeg
+
+      # 5. FFmpeg ni sozlash (configure)
+      - name: Configure FFmpeg
+        run: |
           cd ffmpeg
           ./configure \
             --enable-shared \
@@ -54,14 +61,14 @@ jobs:
             --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
             --prefix=./output
 
-      # 5. FFmpeg ni qurish
+      # 6. FFmpeg ni qurish (make)
       - name: Build FFmpeg
         run: |
           cd ffmpeg
           make -j$(nproc)
           make install
 
-      # 6. Qurilgan fayllarni saqlash (artifact sifatida)
+      # 7. Qurilgan fayllarni saqlash (artifact sifatida)
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
