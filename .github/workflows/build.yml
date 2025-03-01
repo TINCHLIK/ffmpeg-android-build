@@ -24,12 +24,10 @@ jobs:
             ndk-latest-${{ runner.os }}-
 
       - name: Setup NDK (latest version)
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
+        uses: android-actions/setup-android-ndk@v1
         with:
-          ndk-version: latest  # Eng oxirgi versiyani avtomatik tanlash
+          version: latest  # Eng oxirgi versiyani avtomatik tanlash
           add-to-path: true
-          link-to-sdk: false
           local-cache: true
 
       - name: Verify NDK setup
@@ -42,6 +40,7 @@ jobs:
             exit 1
           fi
 
+      # Qolgan qadamlarni o'zgartirmasdan qo'shing
       - name: Install dependencies (NASM for x86)
         run: |
           sudo apt-get update
