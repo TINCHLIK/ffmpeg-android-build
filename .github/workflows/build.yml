@@ -1,5 +1,8 @@
 name: Build FFmpeg for Android
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,21 +12,44 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
       - name: Cache NDK
         uses: actions/cache@v3
         with:
           path: ~/android-ndk
-          key: ndk-r26b-${{ runner.os }}
-      - name: Setup NDK
+          key: ndk-r28-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
+          restore-keys: |
+            ndk-r28-${{ runner.os }}-
+
+      - name: Setup NDK (r28)
         uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
-          ndk-version: r26b
+          ndk-version: r28
           add-to-path: true
           link-to-sdk: false
           local-cache: true
+
+      - name: Verify NDK setup
+        run: |
+          if [ -d "$ANDROID_NDK_HOME" ]; then
+            echo "NDK setup successful at $ANDROID_NDK_HOME"
+          else
+            echo "NDK setup failed!"
+            exit 1
+          fi
+
+      - name: Verify FFmpeg source
+        run: |
+          if [ ! -f configure ]; then
+            echo "configure file not found in root directory!"
+            ls -la
+            exit 1
+          fi
+          echo "FFmpeg source verified successfully."
+
       - name: Build FFmpeg
         run: |
-          cd ffmpeg
           echo "Building for ${{ matrix.arch }}"
           case ${{ matrix.arch }} in
             "armeabi-v7a")
@@ -47,10 +73,7 @@ jobs:
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang
               ;;
           esac
-          if [ ! -f configure ]; then
-            echo "configure file not found in ffmpeg directory!"
-            exit 1
-          fi
+
           ./configure \
             --target-os=android \
             --arch=${{ matrix.arch }} \
@@ -74,12 +97,24 @@ jobs:
             --enable-decoder=h264 \
             --enable-decoder=mp3 \
             --enable-demuxer=mp4 \
-            --enable-demuxer=mp3 || { echo "Configure failed"; exit 1; }
-          make -j1
+            --enable-demuxer=mp3 || { echo "Configure failed"; cat config.log; exit 1; }
+
+          make -j$(nproc)  # CPU soniga mos parallel ish
           mkdir -p ../output/${{ matrix.arch }}/lib
           make install || { echo "Make install failed"; exit 1; }
+
+      - name: Check build output
+        run: |
+          if [ -d "../output/${{ matrix.arch }}/lib" ]; then
+            ls -la ../output/${{ matrix.arch }}/lib
+            echo "Build successful for ${{ matrix.arch }}"
+          else
+            echo "Build failed: output directory not found!"
+            exit 1
+          fi
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
-          path: output/${{ matrix.arch}}/lib/
+          path: ../output/${{ matrix.arch }}/lib/
