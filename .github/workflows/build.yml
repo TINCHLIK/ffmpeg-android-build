@@ -23,11 +23,13 @@ jobs:
           restore-keys: |
             ndk-latest-${{ runner.os }}-
 
-      - name: Setup Android SDK and NDK
-        uses: actions/setup-android@v3
+      - name: Setup NDK (latest version)
+        uses: nttld/setup-ndk@v1
         with:
-          ndk-version: latest  # Eng oxirgi NDK versiyasini avtomatik tanlash
-          sdk-version: latest  # Eng oxirgi SDK versiyasini avtomatik tanlash
+          ndk-version: latest  # Eng oxirgi versiyani avtomatik tanlash
+          add-to-path: true
+          link-to-sdk: false
+          local-cache: true
 
       - name: Verify NDK setup
         run: |
