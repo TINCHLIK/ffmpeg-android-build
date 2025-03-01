@@ -15,21 +15,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Cache NDK
-        uses: actions/cache@v3
-        with:
-          path: ~/android-ndk
-          key: ndk-latest-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
-          restore-keys: |
-            ndk-latest-${{ runner.os }}-
-
-      - name: Setup NDK (latest version)
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: latest  # Eng oxirgi versiyani avtomatik tanlash
-          add-to-path: true
-          link-to-sdk: false
-          local-cache: true
+      - name: Download NDK from official source
+        run: |
+          # Rasmiy manbadan NDK ni yuklab olish
+          NDK_VERSION="r25b"  # O'zgartirishingiz mumkin
+          NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
+          wget https://dl.google.com/android/repository/${NDK_ZIP}
+          unzip ${NDK_ZIP} -d ~/
+          export ANDROID_NDK_HOME=~/android-ndk-${NDK_VERSION}
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
 
       - name: Verify NDK setup
         run: |
