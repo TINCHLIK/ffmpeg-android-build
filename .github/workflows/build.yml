@@ -17,8 +17,7 @@ jobs:
 
       - name: Download NDK from official source
         run: |
-          # Rasmiy manbadan NDK ni yuklab olish
-          NDK_VERSION="r25b"  # O'zgartirishingiz mumkin
+          NDK_VERSION="r25b"
           NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
           wget https://dl.google.com/android/repository/${NDK_ZIP}
           unzip ${NDK_ZIP} -d ~/
@@ -35,11 +34,10 @@ jobs:
             exit 1
           fi
 
-      # Qolgan qadamlarni o'zgartirmasdan qo'shing
-      - name: Install dependencies (NASM for x86)
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm
+          sudo apt-get install -y nasm libx264-dev libmp3lame-dev
 
       - name: Verify FFmpeg source
         run: |
@@ -63,7 +61,7 @@ jobs:
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang
               NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
             "x86")
@@ -75,7 +73,7 @@ jobs:
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang  # API 23 ga o'zgartirildi
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang
               NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
           esac
@@ -89,7 +87,7 @@ jobs:
             --cc=$CC \
             --nm=$NM \
             --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
-            --extra-cflags="-march=$CPU -fPIC -D__ANDROID_API__=21" \
+            --extra-cflags="-march=$CPU -fPIC -D__ANDROID_API__=23" \
             --prefix=../output/${{ matrix.arch }} \
             --enable-shared \
             --disable-static \
@@ -106,7 +104,7 @@ jobs:
             --enable-demuxer=mp4 \
             --enable-demuxer=mp3 || { echo "Configure failed"; cat config.log; exit 1; }
 
-          make -j2  # Parallel jarayonlarni kamaytirish
+          make -j1
           mkdir -p ../output/${{ matrix.arch }}/lib
           make install || { echo "Make install failed"; cat config.log; exit 1; }
 
@@ -125,3 +123,9 @@ jobs:
         with:
           name: ffmpeg-${{ matrix.arch }}
           path: ../output/${{ matrix.arch }}/lib/
+
+      - name: Upload config.log
+        uses: actions/upload-artifact@v4
+        with:
+          name: config-log-${{ matrix.arch }}
+          path: config.log
