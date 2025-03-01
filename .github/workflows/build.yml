@@ -18,15 +18,15 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/android-ndk
-          key: ndk-r27-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
+          key: ndk-27.2.12479018-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
           restore-keys: |
-            ndk-r27-${{ runner.os }}-
+            ndk-27.2.12479018-${{ runner.os }}-
 
-      - name: Setup NDK (r27)
+      - name: Setup NDK (27.2.12479018)
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r27
+          ndk-version: 27.2.12479018
           ndk-release-channel: stable
           add-to-path: true
           link-to-sdk: false
@@ -37,8 +37,8 @@ jobs:
           if [ -d "$ANDROID_NDK_HOME" ]; then
             echo "NDK setup successful at $ANDROID_NDK_HOME"
             echo "NDK version: $(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)"
-            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "27"* ]]; then
-              echo "Warning: Expected NDK r27, but found a different version!"
+            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "27.2.12479018"* ]]; then
+              echo "Warning: Expected NDK 27.2.12479018, but found a different version!"
               exit 1
             fi
           else
