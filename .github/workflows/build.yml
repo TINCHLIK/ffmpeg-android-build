@@ -9,10 +9,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Cache NDK
+        uses: actions/cache@v3
+        with:
+          path: ~/android-ndk
+          key: ndk-r26b-${{ runner.os }}
       - name: Setup NDK
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r26b # r25b o‘rniga r26b
+          ndk-version: r26b
+          add-to-path: true
+          link-to-sdk: false
+          local-cache: true
       - name: Build FFmpeg
         run: |
           cd ffmpeg
