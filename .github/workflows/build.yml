@@ -1,5 +1,5 @@
 name: Build FFmpeg for Android
-on: [push, workflow_dispatch] # Push yoki qo‘lda ishga tushirish
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,12 +9,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Setup NDK
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25b # Eng so‘nggi NDK versiyasi, kerak bo‘lsa o‘zgartiring
-
+          ndk-version: r25b
       - name: Build FFmpeg
         run: |
           cd ffmpeg
@@ -68,7 +66,7 @@ jobs:
           mkdir -p ../output/${{ matrix.arch }}/lib
           make install
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # v3 ni v4 ga o‘zgartirdik
         with:
           name: ffmpeg-${{ matrix.arch }}
           path: output/${{ matrix.arch}}/lib/
