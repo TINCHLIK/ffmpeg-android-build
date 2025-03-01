@@ -19,16 +19,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/android-ndk
-          key: ndk-r28-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
+          key: ndk-latest-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
           restore-keys: |
-            ndk-r28-${{ runner.os }}-
+            ndk-latest-${{ runner.os }}-
 
-      - name: Setup NDK (r28)
+      - name: Setup NDK (latest version)
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r28
-          ndk-release-channel: stable  # To'g'ri versiyani kafolatlash
+          ndk-version: latest  # Eng oxirgi versiyani avtomatik tanlash
+          ndk-release-channel: stable  # Stabil versiyani tanlash
           add-to-path: true
           link-to-sdk: false
           local-cache: true
@@ -38,10 +38,6 @@ jobs:
           if [ -d "$ANDROID_NDK_HOME" ]; then
             echo "NDK setup successful at $ANDROID_NDK_HOME"
             echo "NDK version: $(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)"
-            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "28"* ]]; then
-              echo "Warning: Expected NDK r28, but found a different version!"
-              exit 1
-            fi
           else
             echo "NDK setup failed!"
             exit 1
