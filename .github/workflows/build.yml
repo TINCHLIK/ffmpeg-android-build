@@ -9,13 +9,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
       - name: Setup NDK
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25b
+          ndk-version: r25b # NDK versiyasini tekshiring, agar xatolik bo‘lsa r26b sinab ko‘ring
+
       - name: Build FFmpeg
         run: |
           cd ffmpeg
+          echo "Building for ${{ matrix.arch }}"
           case ${{ matrix.arch }} in
             "armeabi-v7a")
               CPU=armv7-a
@@ -38,6 +41,11 @@ jobs:
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang
               ;;
           esac
+          # Tekshirish qo'shish
+          if [ ! -f configure ]; then
+            echo "configure file not found in ffmpeg directory!"
+            exit 1
+          fi
           ./configure \
             --target-os=android \
             --arch=${{ matrix.arch }} \
@@ -61,12 +69,12 @@ jobs:
             --enable-decoder=h264 \
             --enable-decoder=mp3 \
             --enable-demuxer=mp4 \
-            --enable-demuxer=mp3
-          make -j2
+            --enable-demuxer=mp3 || { echo "Configure failed"; exit 1; }
+          make -j1 # Parallel jarayonlarni kamaytirib sinab ko‘ring
           mkdir -p ../output/${{ matrix.arch }}/lib
-          make install
+          make install || { echo "Make install failed"; exit 1; }
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4 # v3 ni v4 ga o‘zgartirdik
+        uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
           path: output/${{ matrix.arch}}/lib/
