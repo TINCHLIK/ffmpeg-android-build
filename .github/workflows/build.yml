@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
-    timeout-minutes: 30  # Vaqt chegarasini oshirish
+    timeout-minutes: 60  # Vaqt chegarasini oshirish
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -18,16 +18,16 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/android-ndk
-          key: ndk-r28-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
+          key: ndk-r27-${{ runner.os }}-${{ hashFiles('**/ndk-version') }}
           restore-keys: |
-            ndk-r28-${{ runner.os }}-
+            ndk-r27-${{ runner.os }}-
 
-      - name: Setup NDK (r28)
+      - name: Setup NDK (r27)
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r28
-          ndk-release-channel: stable  # To'g'ri versiyani kafolatlash
+          ndk-version: r27
+          ndk-release-channel: stable
           add-to-path: true
           link-to-sdk: false
           local-cache: true
@@ -37,8 +37,8 @@ jobs:
           if [ -d "$ANDROID_NDK_HOME" ]; then
             echo "NDK setup successful at $ANDROID_NDK_HOME"
             echo "NDK version: $(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)"
-            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "28"* ]]; then
-              echo "Warning: Expected NDK r28, but found a different version!"
+            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "27"* ]]; then
+              echo "Warning: Expected NDK r27, but found a different version!"
               exit 1
             fi
           else
@@ -85,7 +85,7 @@ jobs:
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang  # API 23 ga o'zgartirildi
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang
               NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
           esac
@@ -132,6 +132,6 @@ jobs:
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
-        with:
+        with: 
           name: ffmpeg-${{ matrix.arch }}
           path: ../output/${{ matrix.arch }}/lib/
