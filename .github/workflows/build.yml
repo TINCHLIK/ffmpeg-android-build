@@ -3,7 +3,7 @@ name: Build FFmpeg for Android (arm64-v8a)
 on:
   push:
     branches:
-      - main  # Yoki master, agar shu branchda ishlayotgan bo'lsangiz
+      - main  # Yoki master
   pull_request:
     branches:
       - main  # Yoki master
