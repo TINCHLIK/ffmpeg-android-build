@@ -9,6 +9,7 @@ jobs:
     strategy:
       matrix:
         arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
+    timeout-minutes: 30  # Vaqt chegarasini oshirish
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -26,6 +27,7 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: r28
+          ndk-release-channel: stable  # To'g'ri versiyani kafolatlash
           add-to-path: true
           link-to-sdk: false
           local-cache: true
@@ -34,6 +36,11 @@ jobs:
         run: |
           if [ -d "$ANDROID_NDK_HOME" ]; then
             echo "NDK setup successful at $ANDROID_NDK_HOME"
+            echo "NDK version: $(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)"
+            if [[ "$(cat $ANDROID_NDK_HOME/source.properties | grep -i 'Pkg.Revision' | cut -d'=' -f2)" != "28"* ]]; then
+              echo "Warning: Expected NDK r28, but found a different version!"
+              exit 1
+            fi
           else
             echo "NDK setup failed!"
             exit 1
@@ -78,7 +85,7 @@ jobs:
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang  # API 23 ga o'zgartirildi
               NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
           esac
@@ -109,9 +116,9 @@ jobs:
             --enable-demuxer=mp4 \
             --enable-demuxer=mp3 || { echo "Configure failed"; cat config.log; exit 1; }
 
-          make -j4  # Cheklangan parallel jarayonlar
+          make -j2  # Parallel jarayonlarni kamaytirish
           mkdir -p ../output/${{ matrix.arch }}/lib
-          make install || { echo "Make install failed"; exit 1; }
+          make install || { echo "Make install failed"; cat config.log; exit 1; }
 
       - name: Check build output
         run: |
