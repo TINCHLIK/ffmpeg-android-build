@@ -39,6 +39,11 @@ jobs:
             exit 1
           fi
 
+      - name: Install dependencies (NASM for x86)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm
+
       - name: Verify FFmpeg source
         run: |
           if [ ! -f configure ]; then
@@ -56,21 +61,25 @@ jobs:
               CPU=armv7-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
             "x86")
               CPU=i686
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android21-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android21-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm
               ;;
           esac
 
@@ -81,6 +90,7 @@ jobs:
             --enable-cross-compile \
             --cross-prefix=$CROSS_PREFIX \
             --cc=$CC \
+            --nm=$NM \
             --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
             --extra-cflags="-march=$CPU -fPIC -D__ANDROID_API__=21" \
             --prefix=../output/${{ matrix.arch }} \
@@ -99,7 +109,7 @@ jobs:
             --enable-demuxer=mp4 \
             --enable-demuxer=mp3 || { echo "Configure failed"; cat config.log; exit 1; }
 
-          make -j$(nproc)  # CPU soniga mos parallel ish
+          make -j4  # Cheklangan parallel jarayonlar
           mkdir -p ../output/${{ matrix.arch }}/lib
           make install || { echo "Make install failed"; exit 1; }
 
