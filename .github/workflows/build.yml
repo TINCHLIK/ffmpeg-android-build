@@ -28,7 +28,6 @@ jobs:
         id: setup-ndk
         with:
           ndk-version: latest  # Eng oxirgi versiyani avtomatik tanlash
-          ndk-release-channel: stable  # Stabil versiyani tanlash
           add-to-path: true
           link-to-sdk: false
           local-cache: true
