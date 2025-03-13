@@ -37,7 +37,7 @@ jobs:
           echo "Bu test fayl" > output/${{ matrix.arch }}/test.txt
 
       - name: Kutubxonalarni yuklash
-        uses: actions/upload-artifact@v3
+        uses:  actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
           path: output/${{ matrix.arch }}/*
