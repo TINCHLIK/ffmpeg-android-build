@@ -1,76 +1,111 @@
-name: Build FFmpeg for Android (arm64-v8a)
+name: Build FFmpeg for Android
 
 on:
   push:
     branches:
-      - main  # Yoki master
+      - main
   pull_request:
     branches:
-      - main  # Yoki master
+      - main
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        arch: [arm64-v8a]
 
     steps:
-      # 1. Repozitoriyani yuklab olish
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Android NDK ni sozlash
       - name: Set up Android NDK
-        uses: android-actions/setup-android-ndk@v1
+        uses: actions/setup-android-ndk@v3
         with:
-          version: 25.1.8937393  # Mavjud NDK versiyasini ko'rsating
-          add-to-path: true      # NDK ni PATH ga qo'shish
-          local-cache: true      # NDK ni lokal keshlash
+          ndk-version: 'r26d'  # Eng so‘nggi NDK versiyasidan foydalanamiz
+          local-cache: true
 
-      # 3. FFmpeg ni qurish uchun kerakli paketlarni o'rnatish
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            nasm \
-            git \
-            curl \
-            wget \
-            unzip
+          sudo apt-get install -y build-essential git
 
-      # 4. FFmpeg ni klonlash
-      - name: Clone FFmpeg
+      - name: Clone FFmpeg repository
         run: |
           git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
           cd ffmpeg
+          git checkout n6.0  # So‘nggi stabil versiyani tanlaymiz
 
-      # 5. FFmpeg ni sozlash (configure)
-      - name: Configure FFmpeg
+      - name: Build FFmpeg
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
         run: |
           cd ffmpeg
+
+          # Umumiy minimal API darajasini belgilash
+          API_LEVEL=21
+
+          # Arxitekturaga qarab o‘zgaruvchilarni belgilash
+          case ${{ matrix.arch }} in
+            "arm64-v8a")
+              CPU=armv8-a
+              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-nm
+              EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL}"
+              ;;
+          esac
+
+          # FFmpeg-ni konfiguratsiya qilish
           ./configure \
+            --target-os=android \
+            --arch=${{ matrix.arch }} \
+            --cpu=$CPU \
+            --enable-cross-compile \
+            --cross-prefix=$CROSS_PREFIX \
+            --nm=$NM \
+            --cc=$CC \
+            --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
+            --extra-cflags="$EXTRA_CFLAGS" \
+            --extra-ldflags="-Wl,--no-undefined" \
+            --prefix=../output/${{ matrix.arch }}/lib \
             --enable-shared \
             --disable-static \
-            --arch=arm64 \
-            --target-os=android \
-            --enable-cross-compile \
-            --cross-prefix=aarch64-linux-android- \
-            --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
-            --prefix=./output
+            --disable-doc \
+            --disable-programs \
+            --disable-everything \
+            --enable-avcodec \
+            --enable-avformat \
+            --enable-avutil \
+            --enable-swscale \
+            --enable-swresample \
+            --enable-decoder=h264 \
+            --enable-decoder=mp3 \
+            --enable-demuxer=mpegts \
+            --enable-demuxer=mp3 \
+            --enable-muxer=mp4 \
+            --enable-neon \
+            --disable-asm  # Assembler optimallashtirishni o‘chirish (vaqtinchalik)
 
-      # 6. FFmpeg ni qurish (make)
-      - name: Build FFmpeg
-        run: |
-          cd ffmpeg
+          # Xatolikni tekshirish
+          if [ $? -ne 0 ]; then
+            echo "Konfiguratsiya xatosi yuz berdi"
+            cat config.log
+            exit 1
+          fi
+
+          # Kompilyatsiya va o‘rnatish
           make -j$(nproc)
+          mkdir -p ../output/${{ matrix.arch }}/lib
           make install
+          if [ $? -ne 0 ]; then
+            echo "O‘rnatish xatosi yuz berdi"
+            cat config.log
+            exit 1
+          fi
 
-      # 7. Qurilgan fayllarni saqlash (artifact sifatida)
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ffmpeg-build
-          path: ffmpeg/output
+          name: ffmpeg-${{ matrix.arch }}
+          path: output/${{ matrix.arch }}/lib/
