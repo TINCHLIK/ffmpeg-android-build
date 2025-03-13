@@ -87,7 +87,8 @@ jobs:
             --enable-shared \
             --disable-x86asm \
             --disable-vulkan \
-            --disable-asm  # ARM assembler qo'llab-quvvatlashni o'chirish
+            --disable-asm \
+            --disable-stripping  # strip buyrug'ini o'chirish
           make -j$(nproc)
           make install
           echo "${{ matrix.arch }} uchun qurish tugadi."
