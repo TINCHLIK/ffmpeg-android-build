@@ -33,11 +33,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm yasm
 
-      - name: Vulkan SDK o'rnatish (kerak bo'lsa)
+      - name: Vulkan header-larni o'rnatish
         run: |
-          wget https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz
-          tar -xzf vulkan-sdk.tar.gz -C /usr/local/
-          export VULKAN_SDK=/usr/local/vulkan
+          sudo apt-get update
+          sudo apt-get install -y libvulkan-dev
 
       - name: FFmpeg manba kodini yuklab olish
         run: |
