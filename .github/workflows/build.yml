@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
-    timeout-minutes: 600  # Jarayon uchun yetarli vaqt chegarasi
+    timeout-minutes: 600
     steps:
       - name: Repozitoriyani yuklab olish
         uses: actions/checkout@v3
@@ -20,9 +20,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm libx264-dev libmp3lame-dev texi2html libxml2-utils
 
-      - name: Android NDK-ni rasmiy manbadan yuklab olish
+      - name: Android NDK-ni yuklab olish
         run: |
-          NDK_VERSION="r25b"  # API 16-33 ni qo‘llab-quvvatlaydi
+          NDK_VERSION="r25b"
           NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
           wget https://dl.google.com/android/repository/${NDK_ZIP}
           unzip ${NDK_ZIP} -d ~/
@@ -40,7 +40,7 @@ jobs:
 
       - name: FFmpeg-ni kompilyatsiya qilish
         run: |
-          # Umumiy minimal API darajasini belgilash (masalan, 21)
+          # Umumiy minimal API darajasini belgilash
           API_LEVEL=21
 
           # Arxitekturaga qarab o‘zgaruvchilarni belgilash
@@ -49,24 +49,28 @@ jobs:
               CPU=armv7-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-nm
               EXTRA_CFLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=softfp -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-nm
               EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "x86")
               CPU=i686
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-nm
               EXTRA_CFLAGS="-march=i686 -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-nm
               EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
           esac
@@ -78,6 +82,7 @@ jobs:
             --cpu=$CPU \
             --enable-cross-compile \
             --cross-prefix=$CROSS_PREFIX \
+            --nm=$NM \
             --cc=$CC \
             --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
             --extra-cflags="$EXTRA_CFLAGS" \
@@ -95,15 +100,27 @@ jobs:
             --enable-swresample \
             --enable-decoder=h264 \
             --enable-decoder=mp3 \
-            --enable-demuxer=mp4 \
+            --enable-demuxer=mpegts \
             --enable-demuxer=mp3 \
-            --enable-neon  # NEON faqat ARM arxitekturalari uchun
-          || { echo "Konfiguratsiya xatosi yuz berdi"; cat config.log; exit 1; }
+            --enable-muxer=mp4 \
+            --enable-neon
+
+          # Xatolikni tekshirish
+          if [ $? -ne 0 ]; then
+            echo "Konfiguratsiya xatosi yuz berdi"
+            cat config.log
+            exit 1
+          fi
 
           # Kompilyatsiya va o‘rnatish
           make -j$(nproc)
           mkdir -p ../output/${{ matrix.arch }}/lib
-          make install || { echo "O‘rnatish xatosi yuz berdi"; cat config.log; exit 1; }
+          make install
+          if [ $? -ne 0 ]; then
+            echo "O‘rnatish xatosi yuz berdi"
+            cat config.log
+            exit 1
+          fi
 
       - name: Natijalarni yuklash
         uses: actions/upload-artifact@v4
