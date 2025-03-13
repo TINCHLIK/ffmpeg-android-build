@@ -33,6 +33,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm yasm
 
+      - name: Vulkan SDK o'rnatish (kerak bo'lsa)
+        run: |
+          wget https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz
+          tar -xzf vulkan-sdk.tar.gz -C /usr/local/
+          export VULKAN_SDK=/usr/local/vulkan
+
       - name: FFmpeg manba kodini yuklab olish
         run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
@@ -80,8 +86,9 @@ jobs:
             --prefix=$(pwd)/../output/${{ matrix.arch }} \
             --disable-static \
             --enable-shared \
-            --disable-x86asm  # x86asm optimizatsiyasini o'chirish
-          make -j4
+            --disable-x86asm \
+            --disable-vulkan  # Vulkan qo'llab-quvvatlashni o'chirish
+          make -j$(nproc)
           make install
           echo "${{ matrix.arch }} uchun qurish tugadi."
 
