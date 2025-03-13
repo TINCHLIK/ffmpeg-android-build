@@ -18,15 +18,15 @@ jobs:
         id: ndk-cache
         uses: actions/cache@v3
         with:
-          path: ~/android-ndk-r25c
-          key: ndk-r25c-${{ runner.os }}
+          path: ~/android-ndk-r26b
+          key: ndk-r26b-${{ runner.os }}
 
       - name: Android NDK'ni o'rnatish
         if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
-          unzip android-ndk-r25c-linux.zip -d ~/
-          rm android-ndk-r25c-linux.zip
+          wget https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
+          unzip android-ndk-r26b-linux.zip -d ~/
+          rm android-ndk-r26b-linux.zip
 
       - name: NASM va YASM o'rnatish
         run: |
@@ -52,9 +52,9 @@ jobs:
 
       - name: FFmpegni qurish (${{ matrix.arch }})
         run: |
-          export NDK_HOME=~/android-ndk-r25c
+          export NDK_HOME=~/android-ndk-r26b
           export TOOLCHAIN=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-          export API=35  # Minimal Android API versiyasi (Android 15.0)
+          export API=33  # Minimal Android API versiyasi (Android 13)
 
           echo "Qurish jarayoni boshlandi (${{ matrix.arch }})"
           mkdir -p output/${{ matrix.arch }}
