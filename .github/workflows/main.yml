@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build (x86_64) # Vazifa nomi
+    name: Build (arm64-v8a and x86_64) # Vazifa nomi
     runs-on: ubuntu-latest # Ubuntu so‘nggi versiyasida ishlaydi (24.04 hozircha)
     timeout-minutes: 60 # Vaqt chegarasi 60 daqiqa (kerak bo‘lsa o‘zgartiriladi)
 
@@ -46,11 +46,31 @@ jobs:
           echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
           ls -la $ANDROID_NDK_HOME
 
-      # 5-qadam: Qurish jarayonini boshlash (masalan, x86_64 uchun)
-      - name: FFmpegni qurish
+      # 5-qadam: arm64-v8a uchun FFmpegni qurish
+      - name: FFmpegni arm64-v8a uchun qurish
         run: |
-          # Bu yerda loyihangizga mos qurish buyruqlarini qo‘shing
-          # Masalan:
-          # cd $ANDROID_NDK_HOME
-          # ./build_script.sh x86_64
-          echo "Qurish jarayoni boshlandi (bu yerda haqiqiy buyruqlar qo‘shiladi)"
+          echo "arm64-v8a uchun qurish jarayoni boshlandi"
+          cd $ANDROID_NDK_HOME
+          ./build_script.sh arm64-v8a
+          mkdir -p output/arm64-v8a
+          cp -r libs/* output/arm64-v8a/
+          echo "arm64-v8a uchun qurish tugadi"
+
+      # 6-qadam: x86_64 uchun FFmpegni qurish
+      - name: FFmpegni x86_64 uchun qurish
+        run: |
+          echo "x86_64 uchun qurish jarayoni boshlandi"
+          cd $ANDROID_NDK_HOME
+          ./build_script.sh x86_64
+          mkdir -p output/x86_64
+          cp -r libs/* output/x86_64/
+          echo "x86_64 uchun qurish tugadi"
+
+      # 7-qadam: Artifact sifatida saqlash
+      - name: Artifact sifatida saqlash
+        uses: actions/upload-artifact@v3
+        with:
+          name: ffmpeg-libs
+          path: |
+            output/arm64-v8a
+            output/x86_64
