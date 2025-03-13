@@ -11,6 +11,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        arch: [arm64-v8a, x86_64]  # arm64-v8a va x86_64 arxitekturalari
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,8 +22,15 @@ jobs:
       - name: Set up Android NDK
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: '25.1.8937393'  # Sizning NDK versiyangiz
+          ndk-version: '28.0.13004108'  # NDK 28.0.13004108 versiyasi
           add-to-path: true
+
+      - name: Fallback to manual NDK download if needed
+        if: failure()  # Agar NDK yuklanmasa, qo‘lda yuklash
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+          unzip android-ndk-r28-linux.zip -d ./ndk
+          echo "ANDROID_NDK_HOME=$(pwd)/ndk/android-ndk-r28" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -30,9 +41,9 @@ jobs:
         run: |
           git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
           cd ffmpeg
-          git checkout n6.0  # FFmpegning so‘nggi stabil versiyasi (2025-yil mart holatiga)
+          git checkout n6.0  # FFmpegning so‘nggi stabil versiyasi (2025-yil mart)
 
-      - name: Build FFmpeg for arm64-v8a
+      - name: Build FFmpeg for ${{ matrix.arch }}
         env:
           ANDROID_NDK_HOME: ${{ env.NDK_ROOT }}
         run: |
@@ -41,13 +52,26 @@ jobs:
           # API darajasini Android 15 (API 35) ga moslashtirish
           API_LEVEL=35
 
-          # Arxitektura o‘zgaruvchilari (faqat arm64-v8a)
-          ARCH=arm64-v8a
-          CPU=armv8-a
-          CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
-          CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
-          NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-nm
-          EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL} -O3"
+          # Arxitekturaga qarab o‘zgaruvchilarni belgilash
+          case ${{ matrix.arch }} in
+            "arm64-v8a")
+              ARCH=arm64-v8a
+              CPU=armv8-a
+              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-nm
+              EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL} -O3"
+              ;;
+            "x86_64")
+              ARCH=x86_64
+              CPU=x86-64
+              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android${API_LEVEL}-clang
+              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-nm
+              EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=${API_LEVEL} -O3"
+              ;;
+          esac
+
           EXTRA_LDFLAGS="-Wl,--no-undefined"
 
           # FFmpeg-ni konfiguratsiya qilish
@@ -67,44 +91,4 @@ jobs:
             --disable-static \
             --disable-doc \
             --disable-programs \
-            --disable-everything \
-            --enable-avcodec \
-            --enable-avformat \
-            --enable-avutil \
-            --enable-swscale \
-            --enable-swresample \
-            --enable-decoder=h264 \
-            --enable-decoder=mp3 \
-            --enable-demuxer=mpegts \
-            --enable-demuxer=mp3 \
-            --enable-muxer=mp4 \
-            --enable-neon \
-            --enable-small  # Kichikroq hajm uchun optimallashtirish
-
-          # Konfiguratsiya xatoliklarini tekshirish
-          if [ $? -ne 0 ]; then
-            echo "Konfiguratsiya xatosi yuz berdi"
-            cat config.log
-            exit 1
-          fi
-
-          # Kompilyatsiya va o‘rnatish
-          make -j$(nproc)
-          mkdir -p ../output/$ARCH/lib
-          make install
-          if [ $? -ne 0 ]; then
-            echo "Kompilyatsiya yoki o‘rnatish xatosi yuz berdi"
-            cat config.log
-            exit 1
-          fi
-
-      - name: Upload FFmpeg .so files
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffmpeg-arm64-v8a
-          path: output/arm64-v8a/lib/*.so
-
-      - name: Verify generated .so files
-        run: |
-          echo "Yaratilgan .so fayllarni tekshirish:"
-          ls -lh output/arm64-v8a/lib/*.so
+           
