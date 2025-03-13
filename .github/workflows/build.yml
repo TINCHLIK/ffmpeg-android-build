@@ -1,4 +1,4 @@
-name: Build FFmpeg for Android
+name: Android uchun FFmpeg-ni kompilyatsiya qilish
 
 on:
   push:
@@ -10,59 +10,65 @@ jobs:
     strategy:
       matrix:
         arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
-    timeout-minutes: 600  # Vaqt chegarasini oshirish
+    timeout-minutes: 600  # Jarayon uchun yetarli vaqt chegarasi
     steps:
-      - name: Checkout repository
+      - name: Repozitoriyani yuklab olish
         uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Kerakli paketlarni o‘rnatish
         run: |
           sudo apt-get update
           sudo apt-get install -y nasm libx264-dev libmp3lame-dev texi2html libxml2-utils
 
-      - name: Download NDK from official source
+      - name: Android NDK-ni rasmiy manbadan yuklab olish
         run: |
-          NDK_VERSION="r25b"
+          NDK_VERSION="r25b"  # NDKning barqaror versiyasi
           NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
           wget https://dl.google.com/android/repository/${NDK_ZIP}
           unzip ${NDK_ZIP} -d ~/
           export ANDROID_NDK_HOME=~/android-ndk-${NDK_VERSION}
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
 
-      - name: Verify NDK setup
+      - name: NDK o‘rnatilganligini tekshirish
         run: |
           if [ -d "$ANDROID_NDK_HOME" ]; then
-            echo "NDK setup successful at $ANDROID_NDK_HOME"
+            echo "NDK muvaffaqiyatli o‘rnatildi: $ANDROID_NDK_HOME"
           else
-            echo "NDK setup failed!"
+            echo "NDK o‘rnatishda xatolik yuz berdi!"
             exit 1
           fi
 
-      - name: Build FFmpeg
+      - name: FFmpeg-ni kompilyatsiya qilish
         run: |
+          # Arxitekturaga qarab o‘zgaruvchilarni belgilash
           case ${{ matrix.arch }} in
             "armeabi-v7a")
               CPU=armv7-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang
+              EXTRA_CFLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=softfp -fPIC -D__ANDROID_API__=21"
               ;;
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang
+              EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=23"
               ;;
             "x86")
               CPU=i686
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android21-clang
+              EXTRA_CFLAGS="-march=i686 -fPIC -D__ANDROID_API__=21"
               ;;
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang
+              EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=23"
               ;;
           esac
 
+          # FFmpeg-ni konfiguratsiya qilish
           ./configure \
             --target-os=android \
             --arch=${{ matrix.arch }} \
@@ -71,7 +77,8 @@ jobs:
             --cross-prefix=$CROSS_PREFIX \
             --cc=$CC \
             --sysroot=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot \
-            --extra-cflags="-march=$CPU -fPIC -D__ANDROID_API__=23" \
+            --extra-cflags="$EXTRA_CFLAGS" \
+            --extra-ldflags="-Wl,--no-undefined" \
             --prefix=../output/${{ matrix.arch }}/lib \
             --enable-shared \
             --disable-static \
@@ -86,13 +93,16 @@ jobs:
             --enable-decoder=h264 \
             --enable-decoder=mp3 \
             --enable-demuxer=mp4 \
-            --enable-demuxer=mp3 || { echo "Configure failed"; cat config.log; exit 1; }
+            --enable-demuxer=mp3 \
+            --enable-neon  # NEON-ni faqat mos arxitekturalarda yoqish uchun
+          || { echo "Konfiguratsiya xatosi yuz berdi"; cat config.log; exit 1; }
 
+          # Kompilyatsiya va o‘rnatish
           make -j$(nproc)
           mkdir -p ../output/${{ matrix.arch }}/lib
-          make install || { echo "Make install failed"; cat config.log; exit 1; }
+          make install || { echo "O‘rnatish xatosi yuz berdi"; cat config.log; exit 1; }
 
-      - name: Upload artifacts
+      - name: Natijalarni yuklash
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
