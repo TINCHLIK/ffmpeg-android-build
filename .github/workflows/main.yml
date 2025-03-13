@@ -26,18 +26,37 @@ jobs:
           unzip android-ndk-r25c-linux.zip -d ~/
           rm android-ndk-r25c-linux.zip
 
-      - name: NDK muhitini tekshirish
-        run: echo "NDK o‘rnatildi va yo‘nalish sozlandi."
+      - name: FFmpeg manba kodini yuklab olish
+        run: |
+          git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
+          cd ffmpeg
+          git checkout n5.1.2  # Ma'lum bir versiyani tanlash
 
       - name: FFmpegni qurish (${{ matrix.arch }})
         run: |
+          export NDK_HOME=~/android-ndk-r25c
+          export TOOLCHAIN=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          export API=21  # Minimal Android API versiyasi
+
           echo "Qurish jarayoni boshlandi (${{ matrix.arch }})"
-          # Bu yerga qurish jarayoni uchun kerakli buyruqlarni qo‘shing
           mkdir -p output/${{ matrix.arch }}
-          echo "Bu test fayl" > output/${{ matrix.arch }}/test.txt
+          cd ffmpeg
+          ./configure \
+            --arch=${{ matrix.arch }} \
+            --target-os=android \
+            --enable-cross-compile \
+            --sysroot=$TOOLCHAIN/sysroot \
+            --cc=$TOOLCHAIN/bin/${{ matrix.arch }}-android$API-clang \
+            --cxx=$TOOLCHAIN/bin/${{ matrix.arch }}-android$API-clang++ \
+            --prefix=$(pwd)/../output/${{ matrix.arch }} \
+            --disable-static \
+            --enable-shared
+          make -j4
+          make install
+          echo "${{ matrix.arch }} uchun qurish tugadi."
 
       - name: Kutubxonalarni yuklash
-        uses:  actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
-          path: output/${{ matrix.arch }}/*
+          path: output/${{ matrix.arch }}/lib/*.so
