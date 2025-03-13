@@ -34,7 +34,7 @@ jobs:
           mv ~/android-ndk-r25b ~/android-ndk
 
       - name: NDK muhitini tekshirish
-        run: echo "NDK o‘rnatildi: ${{ matrix.arch }}"
+        run: echo "NDK o‘rnatildi:" ${{ matrix.arch }}
 
       - name: FFmpegni qurish (${{ matrix.arch }})
         run: echo "Qurish jarayoni boshlandi (${{ matrix.arch }})"
