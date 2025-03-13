@@ -22,7 +22,7 @@ jobs:
 
       - name: Android NDK-ni rasmiy manbadan yuklab olish
         run: |
-          NDK_VERSION="r25b"  # NDKning barqaror versiyasi
+          NDK_VERSION="r25b"  # API 16-33 ni qo‘llab-quvvatlaydi
           NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
           wget https://dl.google.com/android/repository/${NDK_ZIP}
           unzip ${NDK_ZIP} -d ~/
@@ -40,31 +40,34 @@ jobs:
 
       - name: FFmpeg-ni kompilyatsiya qilish
         run: |
+          # Umumiy minimal API darajasini belgilash (masalan, 21)
+          API_LEVEL=21
+
           # Arxitekturaga qarab o‘zgaruvchilarni belgilash
           case ${{ matrix.arch }} in
             "armeabi-v7a")
               CPU=armv7-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi21-clang
-              EXTRA_CFLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=softfp -fPIC -D__ANDROID_API__=21"
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${API_LEVEL}-clang
+              EXTRA_CFLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=softfp -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang
-              EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=23"
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
+              EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "x86")
               CPU=i686
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android21-clang
-              EXTRA_CFLAGS="-march=i686 -fPIC -D__ANDROID_API__=21"
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android${API_LEVEL}-clang
+              EXTRA_CFLAGS="-march=i686 -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
             "x86_64")
               CPU=x86_64
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang
-              EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=23"
+              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android${API_LEVEL}-clang
+              EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
           esac
 
@@ -94,7 +97,7 @@ jobs:
             --enable-decoder=mp3 \
             --enable-demuxer=mp4 \
             --enable-demuxer=mp3 \
-            --enable-neon  # NEON-ni faqat mos arxitekturalarda yoqish uchun
+            --enable-neon  # NEON faqat ARM arxitekturalari uchun
           || { echo "Konfiguratsiya xatosi yuz berdi"; cat config.log; exit 1; }
 
           # Kompilyatsiya va o‘rnatish
