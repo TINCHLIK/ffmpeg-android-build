@@ -2,23 +2,28 @@ name: FFmpeg Android Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
-    name: Build FFmpeg (arm64-v8a & x86_64)
+    name: Build FFmpeg for Android
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
+    strategy:
+      matrix:
+        arch: [arm64-v8a, x86_64] # Ikkita arxitektura uchun ishlaydi
+
     steps:
+      # 1️⃣ Repozitoriyani yuklash
       - name: Repozitoriyani yuklash
         uses: actions/checkout@v4
         with:
-          repository: TINCHLIK/ffmpeg-android-build
           fetch-depth: 1
 
+      # 2️⃣ NDK keshini tekshirish
       - name: NDK keshini tekshirish
         id: cache-ndk
         uses: actions/cache@v3
@@ -26,6 +31,7 @@ jobs:
           path: ./ndk
           key: ndk-r28-${{ runner.os }}
 
+      # 3️⃣ NDK yuklash (agar keshta bo‘lmasa)
       - name: Android NDKni o‘rnatish
         if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
@@ -36,31 +42,23 @@ jobs:
           echo "Chiqarish tugadi"
           echo "ANDROID_NDK_HOME=$(pwd)/ndk/android-ndk-r28" >> $GITHUB_ENV
 
+      # 4️⃣ NDK muhitini tasdiqlash
       - name: NDK muhitini tekshirish
         run: |
           echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
           ls -la $ANDROID_NDK_HOME
 
-      - name: FFmpegni qurish (arm64-v8a)
+      # 5️⃣ FFmpeg qurish
+      - name: FFmpegni qurish (${{ matrix.arch }})
         run: |
-          echo "arm64-v8a qurish boshlandi"
-          ./build_script.sh arm64-v8a
-          echo "arm64-v8a qurildi"
+          echo "Qurish jarayoni boshlandi (${matrix.arch})"
+          chmod +x build_ffmpeg.sh
+          ./build_ffmpeg.sh ${{ matrix.arch }}
 
-      - name: FFmpegni qurish (x86_64)
-        run: |
-          echo "x86_64 qurish boshlandi"
-          ./build_script.sh x86_64
-          echo "x86_64 qurildi"
-
-      - name: Qurilishdan keyin natijalarni tekshirish
-        run: |
-          echo "Barcha natija fayllari:"
-          find . -name "*.so" || echo "Hech qanday .so fayl topilmadi"
-
-      - name: Qurilishdan so‘ng `.so` fayllarni yuklab olish
-        uses: actions/upload-artifact@v3
+      # 6️⃣ .so fayllarni yuklash
+      - name: Kutubxonalarni yuklash
+        uses: actions/upload-artifact@v4
         with:
-          name: FFmpeg-libraries
+          name: ffmpeg-libs-${{ matrix.arch }}
           path: |
             **/*.so
