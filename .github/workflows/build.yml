@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
-    timeout-minutes: 60  # Vaqt chegarasini oshirish
+    timeout-minutes: 600  # Vaqt chegarasini oshirish
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
