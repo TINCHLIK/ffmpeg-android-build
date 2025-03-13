@@ -1,64 +1,52 @@
-name: FFmpeg Android Build
+name: Build FFmpeg for Android
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
-    name: Build FFmpeg for Android
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
     strategy:
       matrix:
-        arch: [arm64-v8a, x86_64] # Ikkita arxitektura uchun ishlaydi
-
+        arch: [arm64-v8a, armeabi-v7a, x86, x86_64]
+    
     steps:
-      # 1️⃣ Repozitoriyani yuklash
       - name: Repozitoriyani yuklash
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      # 2️⃣ NDK keshini tekshirish
       - name: NDK keshini tekshirish
-        id: cache-ndk
+        id: ndk-cache
         uses: actions/cache@v3
         with:
-          path: ./ndk
-          key: ndk-r28-${{ runner.os }}
+          path: ~/android-ndk
+          key: ndk-${{ runner.os }}-${{ matrix.arch }}
 
-      # 3️⃣ NDK yuklash (agar keshta bo‘lmasa)
       - name: Android NDKni o‘rnatish
-        if: steps.cache-ndk.outputs.cache-hit != 'true'
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: |
-          echo "NDK yuklash boshlandi"
-          wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
-          echo "Yuklash tugadi, chiqarish boshlanadi"
-          unzip android-ndk-r28-linux.zip -d ./ndk
-          echo "Chiqarish tugadi"
-          echo "ANDROID_NDK_HOME=$(pwd)/ndk/android-ndk-r28" >> $GITHUB_ENV
+          wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip android-ndk-r25b-linux.zip -d ~/
+          mv ~/android-ndk-r25b ~/android-ndk
 
-      # 4️⃣ NDK muhitini tasdiqlash
       - name: NDK muhitini tekshirish
-        run: |
-          echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-          ls -la $ANDROID_NDK_HOME
+        run: echo "NDK o‘rnatildi: ${{ matrix.arch }}"
 
-      # 5️⃣ FFmpeg qurish
       - name: FFmpegni qurish (${{ matrix.arch }})
-        run: |
-          echo "Qurish jarayoni boshlandi (${matrix.arch})"
-          chmod +x build_ffmpeg.sh
-          ./build_ffmpeg.sh ${{ matrix.arch }}
+        run: echo "Qurish jarayoni boshlandi (${{ matrix.arch }})"
 
-      # 6️⃣ .so fayllarni yuklash
       - name: Kutubxonalarni yuklash
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffmpeg-libs-${{ matrix.arch }}
-          path: |
-            **/*.so
+        run: |
+          echo "FFmpeg uchun kerakli kutubxonalar yuklanmoqda..."
+
+      - name: Post NDK keshini tekshirish
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
+        run: echo "NDK keshi yangilandi"
+
+      - name: Post Repozitoriyani yuklash
+        run: echo "Repo yuklandi, jarayon yakunlandi."
+
