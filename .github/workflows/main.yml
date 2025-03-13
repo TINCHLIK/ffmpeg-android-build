@@ -8,19 +8,20 @@ jobs:
     timeout-minutes: 360  # Ish vaqtini 6 soatgacha oshirish
     strategy:
       matrix:
-        arch: [arm64-v8a, armeabi-v7a, x86, x86_64]
+        arch: [arm64-v8a, armeabi-v7a, x86, x86_64]  # Arxitekturalar ro'yxati
+
     steps:
       - name: Repozitoriyani yuklash
         uses: actions/checkout@v3
 
-      - name: NDK keshi tekshirish
+      - name: NDK keshini tekshirish
         id: ndk-cache
         uses: actions/cache@v3
         with:
-          path: ~/android-ndk-r25c
-          key: ndk-r25c-${{ runner.os }}
+          path: ~/android-ndk-r26b
+          key: ndk-r26b-${{ runner.os }}
 
-      - name: Android NDK'ni o‘rnatish
+      - name: Android NDK'ni o'rnatish
         if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: |
           wget https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
@@ -44,8 +45,21 @@ jobs:
           mkdir -p output/${{ matrix.arch }}
           cd ffmpeg
 
-          # Clang yo'nalishini tekshirish
-          CLANG_PATH=$TOOLCHAIN/bin/${{ matrix.arch }}-android$API-clang
+          # Arxitektura uchun to'g'ri clang yo'nalishini aniqlash
+          if [ "${{ matrix.arch }}" = "arm64-v8a" ]; then
+            CLANG_PREFIX=aarch64-linux-android
+          elif [ "${{ matrix.arch }}" = "armeabi-v7a" ]; then
+            CLANG_PREFIX=armv7a-linux-androideabi
+          elif [ "${{ matrix.arch }}" = "x86" ]; then
+            CLANG_PREFIX=i686-linux-android
+          elif [ "${{ matrix.arch }}" = "x86_64" ]; then
+            CLANG_PREFIX=x86_64-linux-android
+          else
+            echo "Noma'lum arxitektura: ${{ matrix.arch }}"
+            exit 1
+          fi
+
+          CLANG_PATH=$TOOLCHAIN/bin/${CLANG_PREFIX}${API}-clang
           if [ ! -f "$CLANG_PATH" ]; then
             echo "Xatolik: $CLANG_PATH topilmadi!"
             exit 1
@@ -57,7 +71,7 @@ jobs:
             --enable-cross-compile \
             --sysroot=$TOOLCHAIN/sysroot \
             --cc=$CLANG_PATH \
-            --cxx=$TOOLCHAIN/bin/${{ matrix.arch }}-android$API-clang++ \
+            --cxx=$TOOLCHAIN/bin/${CLANG_PREFIX}${API}-clang++ \
             --prefix=$(pwd)/../output/${{ matrix.arch }} \
             --disable-static \
             --enable-shared
