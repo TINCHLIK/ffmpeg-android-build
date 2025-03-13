@@ -18,15 +18,15 @@ jobs:
         id: ndk-cache
         uses: actions/cache@v3
         with:
-          path: ~/android-ndk-r26b
-          key: ndk-r26b-${{ runner.os }}
+          path: ~/android-ndk-r25c
+          key: ndk-r25c-${{ runner.os }}
 
       - name: Android NDK'ni o'rnatish
         if: steps.ndk-cache.outputs.cache-hit != 'true'
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
-          unzip android-ndk-r26b-linux.zip -d ~/
-          rm android-ndk-r26b-linux.zip
+          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip android-ndk-r25c-linux.zip -d ~/
+          rm android-ndk-r25c-linux.zip
 
       - name: NASM va YASM o'rnatish
         run: |
@@ -38,10 +38,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libvulkan-dev
 
-      - name: CMake o'rnatish
+      - name: Aniq CMake versiyasini o'rnatish
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake
+          wget https://github.com/Kitware/CMake/releases/download/v3.31.5/cmake-3.31.5-linux-x86_64.tar.gz
+          tar -xzf cmake-3.31.5-linux-x86_64.tar.gz
+          export PATH=$PWD/cmake-3.31.5-linux-x86_64/bin:$PATH
 
       - name: FFmpeg manba kodini yuklab olish
         run: |
@@ -52,9 +53,9 @@ jobs:
 
       - name: FFmpegni qurish (${{ matrix.arch }})
         run: |
-          export NDK_HOME=~/android-ndk-r26b
+          export NDK_HOME=~/android-ndk-r25c
           export TOOLCHAIN=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
-          export API=33  # Minimal Android API versiyasi (Android 13)
+          export API=35  # Minimal Android API versiyasi (Android 15)
 
           echo "Qurish jarayoni boshlandi (${{ matrix.arch }})"
           mkdir -p output/${{ matrix.arch }}
