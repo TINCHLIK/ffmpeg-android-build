@@ -1,37 +1,33 @@
 name: FFmpeg Android Build
 
-# Ish jarayoni qachon ishga tushishini belgilaydi
 on:
   push:
-    branches: [ main ] # 'main' filialiga push bo‘lganda ishlaydi
+    branches: [ main ]
   pull_request:
-    branches: [ main ] # 'main' filialiga pull request bo‘lganda ishlaydi
+    branches: [ main ]
 
 jobs:
   build:
-    name: Build (arm64-v8a and x86_64) # Vazifa nomi
-    runs-on: ubuntu-latest # Ubuntu so‘nggi versiyasida ishlaydi (24.04 hozircha)
-    timeout-minutes: 60 # Vaqt chegarasi 60 daqiqa (kerak bo‘lsa o‘zgartiriladi)
+    name: Build FFmpeg (arm64-v8a & x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
-      # 1-qadam: Repozitoriyani yuklab olish
       - name: Repozitoriyani yuklash
         uses: actions/checkout@v4
         with:
           repository: TINCHLIK/ffmpeg-android-build
-          fetch-depth: 1 # Faqat oxirgi kommitni olish uchun
+          fetch-depth: 1
 
-      # 2-qadam: NDK keshini tekshirish
       - name: NDK keshini tekshirish
         id: cache-ndk
         uses: actions/cache@v3
         with:
-          path: ./ndk # Keshlanadigan papka
-          key: ndk-r28-${{ runner.os }} # Kesh kaliti
+          path: ./ndk
+          key: ndk-r28-${{ runner.os }}
 
-      # 3-qadam: Android NDKni yuklash va o‘rnatish
       - name: Android NDKni o‘rnatish
-        if: steps.cache-ndk.outputs.cache-hit != 'true' # Agar keshda bo‘lmasa yuklaydi
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
         run: |
           echo "NDK yuklash boshlandi"
           wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
@@ -40,37 +36,31 @@ jobs:
           echo "Chiqarish tugadi"
           echo "ANDROID_NDK_HOME=$(pwd)/ndk/android-ndk-r28" >> $GITHUB_ENV
 
-      # 4-qadam: NDK muhitini tasdiqlash
       - name: NDK muhitini tekshirish
         run: |
           echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
           ls -la $ANDROID_NDK_HOME
 
-      # 5-qadam: arm64-v8a uchun FFmpegni qurish
-      - name: FFmpegni arm64-v8a uchun qurish
+      - name: FFmpegni qurish (arm64-v8a)
         run: |
-          echo "arm64-v8a uchun qurish jarayoni boshlandi"
-          cd $ANDROID_NDK_HOME
+          echo "arm64-v8a qurish boshlandi"
           ./build_script.sh arm64-v8a
-          mkdir -p output/arm64-v8a
-          cp -r libs/* output/arm64-v8a/
-          echo "arm64-v8a uchun qurish tugadi"
+          echo "arm64-v8a qurildi"
 
-      # 6-qadam: x86_64 uchun FFmpegni qurish
-      - name: FFmpegni x86_64 uchun qurish
+      - name: FFmpegni qurish (x86_64)
         run: |
-          echo "x86_64 uchun qurish jarayoni boshlandi"
-          cd $ANDROID_NDK_HOME
+          echo "x86_64 qurish boshlandi"
           ./build_script.sh x86_64
-          mkdir -p output/x86_64
-          cp -r libs/* output/x86_64/
-          echo "x86_64 uchun qurish tugadi"
+          echo "x86_64 qurildi"
 
-      # 7-qadam: Artifact sifatida saqlash
-      - name: Artifact sifatida saqlash
-        uses: actions/upload-artifact@v4  # v4 versiyasini ishlating
+      - name: Qurilishdan keyin natijalarni tekshirish
+        run: |
+          echo "Barcha natija fayllari:"
+          find . -name "*.so" || echo "Hech qanday .so fayl topilmadi"
+
+      - name: Qurilishdan so‘ng `.so` fayllarni yuklab olish
+        uses: actions/upload-artifact@v3
         with:
-          name: ffmpeg-libs
+          name: FFmpeg-libraries
           path: |
-            output/arm64-v8a
-            output/x86_64
+            **/*.so
