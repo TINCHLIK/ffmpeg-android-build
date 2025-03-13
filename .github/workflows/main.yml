@@ -28,6 +28,11 @@ jobs:
           unzip android-ndk-r26b-linux.zip -d ~/
           rm android-ndk-r26b-linux.zip
 
+      - name: NASM va YASM o'rnatish
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm yasm
+
       - name: FFmpeg manba kodini yuklab olish
         run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
@@ -74,7 +79,8 @@ jobs:
             --cxx=$TOOLCHAIN/bin/${CLANG_PREFIX}${API}-clang++ \
             --prefix=$(pwd)/../output/${{ matrix.arch }} \
             --disable-static \
-            --enable-shared
+            --enable-shared \
+            --disable-x86asm  # x86asm optimizatsiyasini o'chirish
           make -j4
           make install
           echo "${{ matrix.arch }} uchun qurish tugadi."
