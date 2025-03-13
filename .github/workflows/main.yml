@@ -43,7 +43,7 @@ jobs:
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
           cd ffmpeg
           git fetch --tags
-          git checkout n5.1.2  # Ma'lum bir versiyani tanlash
+          git checkout master  # Eng so'nggi versiyani tanlash
 
       - name: FFmpegni qurish (${{ matrix.arch }})
         run: |
@@ -86,7 +86,8 @@ jobs:
             --disable-static \
             --enable-shared \
             --disable-x86asm \
-            --disable-vulkan  # Vulkan qo'llab-quvvatlashni o'chirish
+            --disable-vulkan \
+            --disable-asm  # ARM assembler qo'llab-quvvatlashni o'chirish
           make -j$(nproc)
           make install
           echo "${{ matrix.arch }} uchun qurish tugadi."
