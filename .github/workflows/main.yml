@@ -5,6 +5,7 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 360  # Ish vaqtini 6 soatgacha oshirish
     strategy:
       matrix:
         arch: [arm64-v8a, armeabi-v7a, x86, x86_64]
@@ -17,7 +18,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/android-ndk-r25c
-          key: ndk-r25c
+          key: ndk-r25c-${{ runner.os }}
 
       - name: Android NDK'ni o‘rnatish
         if: steps.ndk-cache.outputs.cache-hit != 'true'
@@ -28,8 +29,9 @@ jobs:
 
       - name: FFmpeg manba kodini yuklab olish
         run: |
-          git clone https://github.com/FFmpeg/FFmpeg.git ffmpeg
+          git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
           cd ffmpeg
+          git fetch --tags
           git checkout n5.1.2  # Ma'lum bir versiyani tanlash
 
       - name: FFmpegni qurish (${{ matrix.arch }})
