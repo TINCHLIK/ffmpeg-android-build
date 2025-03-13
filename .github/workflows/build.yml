@@ -1,77 +1,58 @@
-name: Android uchun FFmpeg-ni kompilyatsiya qilish
+name: Build FFmpeg for Android
 
 on:
   push:
-  workflow_dispatch:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        arch: [armeabi-v7a, arm64-v8a, x86, x86_64]
-    timeout-minutes: 600
+        arch: [arm64-v8a]
+
     steps:
-      - name: Repozitoriyani yuklab olish
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Kerakli paketlarni o‘rnatish
+      - name: Set up Android NDK
+        uses: actions/setup-android-ndk@v3
+        with:
+          ndk-version: 'r26d'  # Eng so‘nggi NDK versiyasidan foydalanamiz
+          local-cache: true
+
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm libx264-dev libmp3lame-dev texi2html libxml2-utils
+          sudo apt-get install -y build-essential git
 
-      - name: Android NDK-ni yuklab olish
+      - name: Clone FFmpeg repository
         run: |
-          NDK_VERSION="r25b"
-          NDK_ZIP="android-ndk-${NDK_VERSION}-linux.zip"
-          wget https://dl.google.com/android/repository/${NDK_ZIP}
-          unzip ${NDK_ZIP} -d ~/
-          export ANDROID_NDK_HOME=~/android-ndk-${NDK_VERSION}
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+          cd ffmpeg
+          git checkout n6.0  # So‘nggi stabil versiyani tanlaymiz
 
-      - name: NDK o‘rnatilganligini tekshirish
+      - name: Build FFmpeg
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
         run: |
-          if [ -d "$ANDROID_NDK_HOME" ]; then
-            echo "NDK muvaffaqiyatli o‘rnatildi: $ANDROID_NDK_HOME"
-          else
-            echo "NDK o‘rnatishda xatolik yuz berdi!"
-            exit 1
-          fi
+          cd ffmpeg
 
-      - name: FFmpeg-ni kompilyatsiya qilish
-        run: |
           # Umumiy minimal API darajasini belgilash
           API_LEVEL=21
 
           # Arxitekturaga qarab o‘zgaruvchilarni belgilash
           case ${{ matrix.arch }} in
-            "armeabi-v7a")
-              CPU=armv7-a
-              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${API_LEVEL}-clang
-              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi-nm
-              EXTRA_CFLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=softfp -fPIC -D__ANDROID_API__=${API_LEVEL}"
-              ;;
             "arm64-v8a")
               CPU=armv8-a
               CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-
               CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang
               NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android-nm
               EXTRA_CFLAGS="-march=armv8-a -fPIC -D__ANDROID_API__=${API_LEVEL}"
-              ;;
-            "x86")
-              CPU=i686
-              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android${API_LEVEL}-clang
-              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android-nm
-              EXTRA_CFLAGS="-march=i686 -fPIC -D__ANDROID_API__=${API_LEVEL}"
-              ;;
-            "x86_64")
-              CPU=x86_64
-              CROSS_PREFIX=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-
-              CC=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android${API_LEVEL}-clang
-              NM=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android-nm
-              EXTRA_CFLAGS="-march=x86-64 -fPIC -D__ANDROID_API__=${API_LEVEL}"
               ;;
           esac
 
@@ -103,7 +84,8 @@ jobs:
             --enable-demuxer=mpegts \
             --enable-demuxer=mp3 \
             --enable-muxer=mp4 \
-            --enable-neon
+            --enable-neon \
+            --disable-asm  # Assembler optimallashtirishni o‘chirish (vaqtinchalik)
 
           # Xatolikni tekshirish
           if [ $? -ne 0 ]; then
@@ -122,8 +104,8 @@ jobs:
             exit 1
           fi
 
-      - name: Natijalarni yuklash
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-${{ matrix.arch }}
-          path: ../output/${{ matrix.arch }}/lib/
+          path: output/${{ matrix.arch }}/lib/
